@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Anteprima Lavagna Spesa</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar" aria-label="Riepilogo lista">
+        <div>
+          <p class="eyebrow">Lavagna di famiglia</p>
+          <h1>Lista della spesa</h1>
+          <p class="status">Anteprima grafica della lavagna</p>
+        </div>
+        <div class="summary" aria-live="polite">
+          <span><strong>4</strong> da comprare</span>
+          <span><strong>1</strong> nel carrello</span>
+        </div>
+      </section>
+
+      <section class="entry-panel" aria-label="Aggiungi prodotto">
+        <form class="item-form">
+          <label>
+            Prodotto
+            <input value="Pomodori datterini">
+          </label>
+          <label>
+            Quantita
+            <input value="500 g">
+          </label>
+          <label>
+            Reparto
+            <select>
+              <option>Frutta e verdura</option>
+            </select>
+          </label>
+          <label>
+            Chi lo segna
+            <input value="Mirko">
+          </label>
+          <label class="full">
+            Nota
+            <input value="Prendere quelli dolci se ci sono">
+          </label>
+          <label class="urgent-toggle">
+            <input type="checkbox" checked>
+            Urgente
+          </label>
+          <button class="primary-button" type="button">Aggiungi</button>
+        </form>
+      </section>
+
+      <section class="toolbar" aria-label="Strumenti lista">
+        <div class="filters" role="tablist" aria-label="Filtri">
+          <button class="filter active" type="button">Da fare</button>
+          <button class="filter" type="button">Tutto</button>
+          <button class="filter" type="button">Presi</button>
+        </div>
+        <div class="actions">
+          <button class="ghost-button" type="button">Copia lista</button>
+          <button class="ghost-button danger" type="button">Svuota presi</button>
+        </div>
+      </section>
+
+      <section class="board" aria-label="Lista della spesa">
+        <div class="items-list">
+          <article class="item-card urgent-card">
+            <label class="check-wrap">
+              <input class="done-check" type="checkbox">
+              <span></span>
+            </label>
+            <div class="item-content">
+              <div class="item-heading">
+                <h2>Pomodori datterini</h2>
+                <span class="quantity">500 g</span>
+              </div>
+              <div class="item-meta">
+                <span class="category">Frutta e verdura</span>
+                <span class="owner">Segnato da Mirko</span>
+                <span class="urgent">Urgente</span>
+              </div>
+              <p class="note">Prendere quelli dolci se ci sono</p>
+            </div>
+            <button class="delete-button" type="button" aria-label="Elimina prodotto">×</button>
+          </article>
+
+          <article class="item-card">
+            <label class="check-wrap">
+              <input class="done-check" type="checkbox">
+              <span></span>
+            </label>
+            <div class="item-content">
+              <div class="item-heading">
+                <h2>Latte fresco</h2>
+                <span class="quantity">2 bottiglie</span>
+              </div>
+              <div class="item-meta">
+                <span class="category">Frigo</span>
+                <span class="owner">Segnato da Casa</span>
+                <span class="urgent">Urgente</span>
+              </div>
+              <p class="note">Intero o parzialmente scremato</p>
+            </div>
+            <button class="delete-button" type="button" aria-label="Elimina prodotto">×</button>
+          </article>
+
+          <article class="item-card">
+            <label class="check-wrap">
+              <input class="done-check" type="checkbox">
+              <span></span>
+            </label>
+            <div class="item-content">
+              <div class="item-heading">
+                <h2>Pane</h2>
+                <span class="quantity">1</span>
+              </div>
+              <div class="item-meta">
+                <span class="category">Dispensa</span>
+                <span class="owner">Segnato da Casa</span>
+                <span class="urgent">Urgente</span>
+              </div>
+            </div>
+            <button class="delete-button" type="button" aria-label="Elimina prodotto">×</button>
+          </article>
+
+          <article class="item-card">
+            <label class="check-wrap">
+              <input class="done-check" type="checkbox">
+              <span></span>
+            </label>
+            <div class="item-content">
+              <div class="item-heading">
+                <h2>Detersivo piatti</h2>
+                <span class="quantity">1</span>
+              </div>
+              <div class="item-meta">
+                <span class="category">Casa</span>
+                <span class="owner">Segnato da Casa</span>
+                <span class="urgent">Urgente</span>
+              </div>
+            </div>
+            <button class="delete-button" type="button" aria-label="Elimina prodotto">×</button>
+          </article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
