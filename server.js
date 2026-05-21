@@ -11,6 +11,11 @@ const familyDataFile = path.join(__dirname, "family-state.json");
 const familyPassword = process.env.FAMILY_PASSWORD || "cosmo";
 const sessionCookie = "dashboard_family_session";
 const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const supabaseUrl = (process.env.SUPABASE_URL || "")
+  .replace(/\/rest\/v1\/?$/, "")
+  .replace(/\/$/, "");
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || "";
+const apiVersion = "server-supabase-2026-05-21-fix-1";
 
 let state = loadState();
 let familyState = loadFamilyState();
@@ -66,6 +71,100 @@ function saveFamilyState(input) {
   };
   fs.writeFileSync(familyDataFile, JSON.stringify(familyState, null, 2));
   return familyState;
+}
+
+async function loadSharedState(key, fallback) {
+  if (!supabaseUrl || !supabaseKey) {
+    return fallback;
+  }
+
+  const result = await fetch(`${supabaseUrl}/rest/v1/app_state?key=eq.${encodeURIComponent(key)}&select=value`, {
+    headers: supabaseHeaders()
+  });
+  if (!result.ok) {
+    throw new Error("Database non raggiungibile.");
+  }
+
+  const rows = await result.json();
+  return rows[0]?.value || fallback;
+}
+
+async function saveSharedState(key, value) {
+  const payload = {
+    ...value,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (!supabaseUrl || !supabaseKey) {
+    if (key === "shopping") {
+      state = payload;
+      saveState();
+      return state;
+    }
+    return saveFamilyState(payload);
+  }
+
+  const result = await fetch(`${supabaseUrl}/rest/v1/app_state?on_conflict=key`, {
+    method: "POST",
+    headers: {
+      ...supabaseHeaders(),
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=representation"
+    },
+    body: JSON.stringify({ key, value: payload })
+  });
+  if (!result.ok) {
+    throw new Error("Non riesco a salvare nel database.");
+  }
+
+  const rows = await result.json();
+  return rows[0]?.value || payload;
+}
+
+function supabaseHeaders() {
+  return {
+    apikey: supabaseKey,
+    Authorization: `Bearer ${supabaseKey}`
+  };
+}
+
+async function getShoppingState() {
+  state = await loadSharedState("shopping", state);
+  return state;
+}
+
+async function setShoppingState(nextState) {
+  state = await saveSharedState("shopping", nextState);
+  return state;
+}
+
+async function getFamilyState() {
+  familyState = await loadSharedState("family", familyState);
+  return familyState;
+}
+
+async function setFamilyState(input) {
+  familyState = await saveSharedState("family", {
+    expenses: Array.isArray(input.expenses) ? input.expenses : familyState.expenses,
+    calendarEvents: Array.isArray(input.calendarEvents) ? input.calendarEvents : familyState.calendarEvents,
+    notes: Array.isArray(input.notes) ? input.notes : familyState.notes,
+    vaultMovements: Array.isArray(input.vaultMovements) ? input.vaultMovements : familyState.vaultMovements
+  });
+  return familyState;
+}
+
+async function checkDatabase() {
+  if (!supabaseUrl || !supabaseKey) {
+    return { connected: false, message: "Variabili Supabase mancanti." };
+  }
+
+  const result = await fetch(`${supabaseUrl}/rest/v1/app_state?select=key&limit=1`, {
+    headers: supabaseHeaders()
+  });
+  if (!result.ok) {
+    return { connected: false, status: result.status, message: await result.text() };
+  }
+  return { connected: true };
 }
 
 function createItem(input) {
@@ -338,6 +437,34 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname === "/api/login" && request.method === "POST") {
+      const input = await readBody(request);
+      const password = String(input.password || "").trim();
+      if (password !== familyPassword) {
+        sendJson(response, 401, { error: "Password non corretta." });
+        return;
+      }
+      response.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Set-Cookie": `${sessionCookie}=${encodeURIComponent(createSessionToken())}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=2592000`
+      });
+      response.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    if (url.pathname === "/api/health" && request.method === "GET") {
+      sendJson(response, 200, {
+        ok: true,
+        version: apiVersion,
+        hasSupabaseUrl: Boolean(supabaseUrl),
+        hasSupabaseKey: Boolean(supabaseKey),
+        supabaseHost: supabaseUrl ? new URL(supabaseUrl).host : "",
+        database: await checkDatabase()
+      });
+      return;
+    }
+
     if (!isAuthenticated(request) && !url.pathname.startsWith("/icons/")) {
       if (url.pathname.startsWith("/api/")) {
         sendJson(response, 401, { error: "Serve la password di famiglia." });
@@ -348,38 +475,40 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (url.pathname === "/api/items" && request.method === "GET") {
-      sendJson(response, 200, state);
+      sendJson(response, 200, await getShoppingState());
       return;
     }
 
     if (url.pathname === "/api/family-state" && request.method === "GET") {
-      sendJson(response, 200, familyState);
+      sendJson(response, 200, await getFamilyState());
       return;
     }
 
     if (url.pathname === "/api/family-state" && request.method === "PUT") {
       const input = await readBody(request);
-      sendJson(response, 200, saveFamilyState(input));
+      sendJson(response, 200, await setFamilyState(input));
       return;
     }
 
     if (url.pathname === "/api/items" && request.method === "POST") {
       const input = await readBody(request);
+      const currentState = await getShoppingState();
       const item = createItem(input);
       if (!item.name) {
         sendJson(response, 400, { error: "Aggiungi almeno il nome del prodotto." });
         return;
       }
-      state.items.unshift(item);
-      saveState();
-      sendJson(response, 201, { item, state });
+      currentState.items.unshift(item);
+      const savedState = await setShoppingState(currentState);
+      sendJson(response, 201, { item, state: savedState });
       return;
     }
 
     if (url.pathname.startsWith("/api/items/") && request.method === "PATCH") {
       const id = decodeURIComponent(url.pathname.split("/").pop());
       const input = await readBody(request);
-      const item = state.items.find(entry => entry.id === id);
+      const currentState = await getShoppingState();
+      const item = currentState.items.find(entry => entry.id === id);
       if (!item) {
         sendJson(response, 404, { error: "Elemento non trovato." });
         return;
@@ -393,23 +522,23 @@ const server = http.createServer(async (request, response) => {
         urgent: input.urgent === undefined ? item.urgent : Boolean(input.urgent),
         done: input.done === undefined ? item.done : Boolean(input.done)
       });
-      saveState();
-      sendJson(response, 200, { item, state });
+      const savedState = await setShoppingState(currentState);
+      sendJson(response, 200, { item, state: savedState });
       return;
     }
 
     if (url.pathname.startsWith("/api/items/") && request.method === "DELETE") {
       const id = decodeURIComponent(url.pathname.split("/").pop());
-      state.items = state.items.filter(entry => entry.id !== id);
-      saveState();
-      sendJson(response, 200, state);
+      const currentState = await getShoppingState();
+      currentState.items = currentState.items.filter(entry => entry.id !== id);
+      sendJson(response, 200, await setShoppingState(currentState));
       return;
     }
 
     if (url.pathname === "/api/clear-done" && request.method === "POST") {
-      state.items = state.items.filter(entry => !entry.done);
-      saveState();
-      sendJson(response, 200, state);
+      const currentState = await getShoppingState();
+      currentState.items = currentState.items.filter(entry => !entry.done);
+      sendJson(response, 200, await setShoppingState(currentState));
       return;
     }
 
