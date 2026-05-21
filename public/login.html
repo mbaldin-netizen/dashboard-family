@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard Family - accesso</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#fffdf4">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body class="login-page">
+    <main class="login-card" aria-label="Accesso Dashboard Family">
+      <div class="home-signature" aria-hidden="true">
+        <span class="signature-home-icon"></span>
+        <span class="signature-name">Dashboard Family</span>
+      </div>
+      <h1>Entra in casa</h1>
+      <p>Inserisci la password di famiglia.</p>
+      <form id="loginForm" class="login-form">
+        <label>
+          PASSWORD
+          <input id="passwordInput" name="password" type="password" autocomplete="current-password" autofocus required>
+        </label>
+        <button class="primary-button" type="submit">Entra</button>
+        <p id="loginStatus" class="status" aria-live="polite"></p>
+      </form>
+    </main>
+    <script>
+      const form = document.querySelector("#loginForm");
+      const status = document.querySelector("#loginStatus");
+      const passwordInput = document.querySelector("#passwordInput");
+
+      form.addEventListener("submit", async event => {
+        event.preventDefault();
+        status.textContent = "Controllo la password...";
+        try {
+          const response = await fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: passwordInput.value })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(payload.error || "Password non corretta.");
+          }
+          window.location.href = "/";
+        } catch (error) {
+          status.textContent = error.message;
+          passwordInput.select();
+        }
+      });
+    </script>
+  </body>
+</html>

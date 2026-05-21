@@ -115,6 +115,11 @@ async function api(path, options = {}) {
     payload = {};
   }
 
+  if (response.status === 401) {
+    window.location.href = "/login.html";
+    throw new Error(payload.error || "Serve la password di famiglia.");
+  }
+
   if (!response.ok) {
     throw new Error(payload.error || "Operazione non riuscita.");
   }
