@@ -26,4 +26,3 @@ SUPABASE_SERVICE_ROLE_KEY=la-tua-secret-key-supabase
 ```
 
 La `SUPABASE_SERVICE_ROLE_KEY` non va condivisa e non va caricata su GitHub.
-Ultimo aggiornamento deploy.
