@@ -21,10 +21,23 @@ const defaultFamilyState = () => ({
   updatedAt: new Date().toISOString()
 });
 
+const apiVersion = "vercel-supabase-2026-05-21-fix-2";
+
 module.exports = async (request, response) => {
   const route = getRoute(request);
 
   try {
+    if (route === "/health" && request.method === "GET") {
+      return sendJson(response, 200, {
+        ok: true,
+        version: apiVersion,
+        hasSupabaseUrl: Boolean(supabaseUrl),
+        hasSupabaseKey: Boolean(supabaseKey),
+        supabaseHost: supabaseUrl ? new URL(supabaseUrl).host : "",
+        database: await checkDatabase()
+      });
+    }
+
     if (route === "/session" && request.method === "GET") {
       return sendJson(response, 200, { authenticated: isAuthenticated(request) });
     }
@@ -200,6 +213,36 @@ async function saveState(key, value) {
 
   const rows = await fetchResponse.json();
   return rows[0]?.value || payload;
+}
+
+async function checkDatabase() {
+  if (!supabaseUrl || !supabaseKey) {
+    return {
+      connected: false,
+      message: "Variabili Supabase mancanti su Vercel."
+    };
+  }
+
+  try {
+    const fetchResponse = await fetch(`${supabaseUrl}/rest/v1/app_state?select=key&limit=1`, {
+      headers: supabaseHeaders()
+    });
+    if (!fetchResponse.ok) {
+      return {
+        connected: false,
+        status: fetchResponse.status,
+        message: await fetchResponse.text()
+      };
+    }
+    return {
+      connected: true
+    };
+  } catch (error) {
+    return {
+      connected: false,
+      message: error.message || "Database non raggiungibile."
+    };
+  }
 }
 
 function supabaseHeaders() {
