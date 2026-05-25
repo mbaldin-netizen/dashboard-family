@@ -71,8 +71,8 @@ module.exports = async (request, response) => {
       return sendJson(response, 201, { item, state: saved });
     }
 
-    if (route.startsWith("/items/") && request.method === "PATCH") {
-      const id = decodeURIComponent(route.split("/").pop());
+    if ((route === "/items" || route.startsWith("/items/")) && request.method === "PATCH") {
+      const id = getItemId(request, route);
       const input = request.body || {};
       const state = await loadState("shopping", defaultShoppingState());
       const item = state.items.find(entry => entry.id === id);
@@ -92,8 +92,8 @@ module.exports = async (request, response) => {
       return sendJson(response, 200, { item, state: saved });
     }
 
-    if (route.startsWith("/items/") && request.method === "DELETE") {
-      const id = decodeURIComponent(route.split("/").pop());
+    if ((route === "/items" || route.startsWith("/items/")) && request.method === "DELETE") {
+      const id = getItemId(request, route);
       const state = await loadState("shopping", defaultShoppingState());
       state.items = state.items.filter(entry => entry.id !== id);
       return sendJson(response, 200, await saveState("shopping", state));
@@ -126,6 +126,13 @@ function getRoute(request) {
     return `/${pathFromQuery}`.replace(/\/$/, "") || "/";
   }
   return url.pathname.replace(/^\/api/, "").replace(/\/$/, "") || "/";
+}
+
+function getItemId(request, route) {
+  const url = new URL(request.url, "https://dashboard-family.local");
+  const idFromQuery = url.searchParams.get("id");
+  if (idFromQuery) return idFromQuery;
+  return decodeURIComponent(route.split("/").pop() || "");
 }
 
 function getCookie(request, name) {
