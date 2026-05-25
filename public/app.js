@@ -448,7 +448,7 @@ function createCard(item) {
 
 async function updateItem(id, changes) {
   try {
-    const payload = await api(`/api/items/${encodeURIComponent(id)}`, {
+    const payload = await api(`/api/items?id=${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify(changes)
     });
@@ -469,7 +469,7 @@ async function deleteItem(id) {
     render();
     syncStatus.textContent = "Prodotto eliminato";
 
-    const data = await api(`/api/items/${encodeURIComponent(id)}`, { method: "DELETE" });
+    const data = await api(`/api/items?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     items = data.items;
     render();
     syncStatus.textContent = "Prodotto eliminato";
